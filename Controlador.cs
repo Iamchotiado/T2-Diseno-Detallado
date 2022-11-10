@@ -1,5 +1,6 @@
 using Vista;
-using Modelos;
+using ModeloJugador;
+using ModeloJuego;
 
 namespace Controlador 
 {

@@ -1,0 +1,2 @@
+Solo opcion Jugar Local
+No se hizo los tests y tampoco lo de jugar via Sockets

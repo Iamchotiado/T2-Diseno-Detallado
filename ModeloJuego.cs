@@ -1,5 +1,9 @@
 using Vista;
-namespace Modelos
+using ModeloCarta;
+using ModeloJugador;
+
+
+namespace ModeloJuego
 {
     public static class GeneradorNumerosAleatorios
     {
@@ -8,49 +12,6 @@ namespace Modelos
 
         public static double Generar () => rng.Next();
     }
-    // clases juego la escoba
-    public class Carta
-    {
-        public string pinta { get; set; }
-        public string valor { get; set; }
-        public int puntos { get; set; }
-
-        public Carta(string pinta, string valor, int puntos)
-        {
-            this.pinta = pinta;
-            this.valor = valor;
-            this.puntos = puntos;
-        }
-
-        public string nombre
-        {
-            get
-            {
-                return valor + " _ " + pinta;
-            }
-        }
-    }
-
-    public class Jugador
-    {
-        public string nombre { get; set; }
-        public int puntos { get; set; }
-        public List<Carta> mano { get; set; }
-        public List<Carta> pila_acumulada { get; set; }
-        public int numero_escobas { get; set; }
-        public string numero_jugador { get; set; }
-
-        public Jugador(string nombre, string numero_jugador)
-        {
-            this.nombre = nombre;
-            this.puntos = 0;
-            this.mano = new List<Carta>();
-            this.pila_acumulada = new List<Carta>();
-            this.numero_escobas = 0;
-            this.numero_jugador = numero_jugador;
-        }
-    }
-
     public class Juego
     {
         public List<Jugador> jugadores { get; set; }
@@ -120,7 +81,6 @@ namespace Modelos
         }
         public void barajar()
         {
-            Random rnd = new Random();
             this.baraja = this.baraja.OrderBy(x => GeneradorNumerosAleatorios.Generar()).ToList();
         }
 
@@ -162,69 +122,74 @@ namespace Modelos
         }
 
         // https://stackoverflow.com/questions/10738926/efficient-algorithm-to-find-a-combination-which-summation-is-equal-to-a-known-n
-        public static IEnumerable<string> GetCombinations(List<Carta> set, int sum, string values) 
+        public static IEnumerable<string> obtenerCombinacionesString(List<Carta> cartas_mesa, int suma_objetivo, string nombre_cartas) 
         {
-            for (int i = 0; i < set.Count; i++) 
+            for (int i = 0; i < cartas_mesa.Count; i++) 
             {
-                int left = sum - set[i].puntos;
-                string vals = set[i].nombre + "," + values;
-                if (left == 0) 
+                int faltante_suma_objetivo = suma_objetivo - cartas_mesa[i].puntos;
+                string nombre_cartas_actual = cartas_mesa[i].nombre + "," + nombre_cartas;
+                if (faltante_suma_objetivo == 0) 
                 {
-                    yield return vals;
+                    yield return nombre_cartas_actual;
                 } 
                 else 
                 {
-                    List<Carta> possible = set.Take(i).Where(n => n.puntos <= sum).ToList();
-                    if (possible.Count > 0) 
+                    List<Carta> cartas_posibles = cartas_mesa.Take(i).Where(n => n.puntos <= suma_objetivo).ToList();
+                    if (cartas_posibles.Count > 0) 
                     {
-                        foreach (string s in GetCombinations(possible, left, vals)) {
-                            yield return s;
+                        foreach (string string_combinacion in obtenerCombinacionesString(cartas_posibles, faltante_suma_objetivo, nombre_cartas_actual)) {
+                            yield return string_combinacion;
                         }
                     }
                 }
             }
         }
 
-        // check the combinations of cards that sum 15 in the deck
-        public List<List<Carta>> checkCombinations(List<Carta> cartas)
+        public List<List<Carta>> obtenerObjetosCombinaciones(List<Carta> cartas)
         {
-            List<List<Carta>> combinations = new List<List<Carta>>();
-            foreach (string s in GetCombinations(cartas, 15, "")) {
-                string combination_string = s.Remove(s.Length - 1);
-                List<String> combination_string_list = combination_string.Split(',').ToList();
-                List<Carta> combination_object_list = this.convertirNombreCartasEnObjetos(combination_string_list, cartas);
-                combinations.Add(combination_object_list);
+            List<List<Carta>> lista_todas_combinaciones = new List<List<Carta>>();
+            foreach (string string_combinacion in obtenerCombinacionesString(cartas, 15, "")) {
+                string string_combinacion_formateado = string_combinacion.Remove(string_combinacion.Length - 1);
+                List<String> lista_string_combinacion = string_combinacion_formateado.Split(',').ToList();
+                List<Carta> lista_cartas_combinacion = this.convertirNombreCartasEnObjetos(lista_string_combinacion, cartas);
+                lista_todas_combinaciones.Add(lista_cartas_combinacion);
             }
-            return combinations;
+            return lista_todas_combinaciones;
         }
 
-        public void chequearCartaJugada(int indice_carta)
+        public Carta bajarCarta(int indice_carta)
         {
             Carta carta_bajada = this.jugadores[this.turno].mano[indice_carta];
             this.cartas_centro_mesa.Add(carta_bajada);
             this.jugadores[this.turno].mano.RemoveAt(indice_carta);
-            List<List<Carta>> combinations = this.eliminarCombinacionesSinCartaBajada(this.checkCombinations(this.cartas_centro_mesa), carta_bajada);
-            
+            return carta_bajada;
+        }
+
+        public void robarCartasDeLaMesa(List<Carta> combinacion_seleccionada)
+        {
+            Vistas.printCartasRobadasMesa(this.jugadores[this.turno], combinacion_seleccionada);
+            pasarCartasRobadasAPilaJugador(combinacion_seleccionada, this.turno);
+            chequearEscoba();
+            this.numero_ultimo_jugador = this.turno;
+        }
+
+        public void chequearCartaJugada(int indice_carta)
+        {
+            Carta carta_bajada = this.bajarCarta(indice_carta);
+            List<List<Carta>> combinations = this.eliminarCombinacionesSinCartaBajada(this.obtenerObjetosCombinaciones(this.cartas_centro_mesa), carta_bajada);
             if (combinations.Count == 0)
             {
                 Vistas.printNoExisteCombinacion();
             }
             else if (combinations.Count == 1)
             {
-                Vistas.printCartasRobadasMesa(this.jugadores[this.turno], combinations[0]);
-                pasarCartasRobadasAPilaJugador(combinations[0], this.turno);
-                chequearEscoba();
-                this.numero_ultimo_jugador = this.turno;
+                robarCartasDeLaMesa(combinations[0]);
             }
             else if (combinations.Count > 1)
             {
                 int combinacion_seleccionada = Vistas.seleccionCombinacion(combinations);
-                Vistas.printCartasRobadasMesa(this.jugadores[this.turno], combinations[combinacion_seleccionada]);
-                pasarCartasRobadasAPilaJugador(combinations[combinacion_seleccionada], this.turno);
-                chequearEscoba();
-                this.numero_ultimo_jugador = this.turno;
+                robarCartasDeLaMesa(combinations[combinacion_seleccionada]);
             }
-
         }
 
         public List<List<Carta>> eliminarCombinacionesSinCartaBajada(List<List<Carta>> combinations, Carta carta_bajada)
@@ -289,22 +254,32 @@ namespace Modelos
             this.cartas_centro_mesa.Clear();
         }
 
+        public void robarCartasMesaReparticion(int numero_escobas, List<List<Carta>> combinaciones_escoba)
+        {
+            this.jugadores[this.jugador_repartidor].numero_escobas += numero_escobas;
+            if (numero_escobas == 1)
+            {
+                this.pasarCartasRobadasAPilaJugador(combinaciones_escoba[0], this.jugador_repartidor);
+            }
+            else if (numero_escobas == 2)
+            {
+                this.pasarCartasRobadasAPilaJugador(combinaciones_escoba[0], this.jugador_repartidor);
+                this.pasarCartasRobadasAPilaJugador(combinaciones_escoba[1], this.jugador_repartidor);
+            }
+            Vistas.printEscobaEnReparticion(this.jugadores[this.jugador_repartidor], numero_escobas);
+        }
+
         public void chequearEscobaJugadorRepartidor()
         {
-            List<List<Carta>> combinations = this.contarCombinacionesEscobaRepartidor(this.checkCombinations(this.cartas_centro_mesa));
-            Vistas.printAvisoReparticion(this.jugadores[this.jugador_repartidor], 1);
+            List<List<Carta>> combinations = this.contarCombinacionesEscobaRepartidor(this.obtenerObjetosCombinaciones(this.cartas_centro_mesa));
+            Vistas.printAvisoReparticion(this.jugadores[this.jugador_repartidor]);
             if (combinations.Count == 1)
             {
-                this.jugadores[this.jugador_repartidor].numero_escobas ++;
-                this.pasarCartasRobadasAPilaJugador(combinations[0], this.jugador_repartidor);
-                Vistas.printEscobaEnReparticion(this.jugadores[this.jugador_repartidor], 1);
+                this.robarCartasMesaReparticion(1, combinations);
             }
             else if (combinations.Count == 2)
             {
-                this.jugadores[this.jugador_repartidor].numero_escobas += 2;
-                this.pasarCartasRobadasAPilaJugador(combinations[0], this.jugador_repartidor);
-                this.pasarCartasRobadasAPilaJugador(combinations[1], this.jugador_repartidor);
-                Vistas.printEscobaEnReparticion(this.jugadores[this.jugador_repartidor], 2);
+                this.robarCartasMesaReparticion(2, combinations);
             }
         }
 
@@ -351,6 +326,11 @@ namespace Modelos
                 jugador.puntos += chequearMayoriaBaraja(int.Parse(jugador.numero_jugador) - 1);
                 jugador.puntos += chequearMayoriaPintaOro(int.Parse(jugador.numero_jugador) - 1);
             }
+            this.pasarDeRonda();
+        }
+
+        public void pasarDeRonda()
+        {
             this.mandarPrintCartasGanadasyPuntajes();
             this.llamarReseteoDeParametros();
         }
@@ -460,4 +440,3 @@ namespace Modelos
 
     }
 }
-

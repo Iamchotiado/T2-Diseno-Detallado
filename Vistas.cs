@@ -1,4 +1,7 @@
-using Modelos;
+using ModeloJugador;
+using ModeloCarta;
+using ModeloJuego;
+
 namespace Vista
 {
     public static class Vistas
@@ -125,7 +128,7 @@ namespace Vista
             Console.WriteLine("-------------------------------------------------------------");
         }
 
-        public static void printAvisoReparticion(Jugador jugador_repartidor, int numero_escobas)
+        public static void printAvisoReparticion(Jugador jugador_repartidor)
         {
             Console.WriteLine("\n-------------------------------------------------------------");
             Console.WriteLine("Jugador " + jugador_repartidor.numero_jugador + "( " + jugador_repartidor.nombre + " )" + " reparte!");
