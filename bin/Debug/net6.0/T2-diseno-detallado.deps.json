@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "T2-diseno-detallado/1.0.0": {
+        "runtime": {
+          "T2-diseno-detallado.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "T2-diseno-detallado/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
